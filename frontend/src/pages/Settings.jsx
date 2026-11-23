@@ -31,15 +31,16 @@ export default function Settings({
 
   const handleSaveApiUrl = (e) => {
     e.preventDefault();
-    setApiBaseUrl(apiUrl.trim());
+    const updated = setApiBaseUrl(apiUrl.trim());
+    setApiUrlState(updated);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
     onRefreshHealth();
   };
 
   const handleResetDefaultUrl = () => {
-    setApiBaseUrl(null);
-    setApiUrlState('http://localhost:5000/api');
+    const defaultUrl = setApiBaseUrl(null);
+    setApiUrlState(defaultUrl);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
     onRefreshHealth();
@@ -48,6 +49,8 @@ export default function Settings({
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
+    const updated = setApiBaseUrl(apiUrl.trim());
+    setApiUrlState(updated);
     const start = performance.now();
     try {
       const data = await api.checkHealth();
@@ -55,13 +58,13 @@ export default function Settings({
       setTestResult({
         success: true,
         latency,
-        message: `Connected successfully! Response time: ${latency}ms. Model status: ${data.model_loaded ? 'Loaded' : 'Not Loaded'}`,
+        message: `Connected successfully to ${updated}! Response time: ${latency}ms. Model status: ${data.model_loaded ? 'Loaded' : 'Not Loaded'}`,
       });
       onRefreshHealth();
     } catch (err) {
       setTestResult({
         success: false,
-        message: err.message || 'Connection failed. Is Flask running on port 5000?',
+        message: err.message || 'Connection failed. If hosted on Render, please allow ~30s for the free tier service to wake up.',
       });
     } finally {
       setIsTesting(false);
@@ -131,6 +134,9 @@ export default function Settings({
                   <span>{saveSuccess ? 'Saved' : 'Save URL'}</span>
                 </button>
               </div>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                Tip: Enter your live backend URL (e.g. <code className="text-cyan-400">https://email-spam-api-et0p.onrender.com/api</code>). If you omit <code className="text-cyan-400">/api</code>, it will be added automatically.
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
