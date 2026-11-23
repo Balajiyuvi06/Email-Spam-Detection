@@ -8,8 +8,8 @@ import Analytics from './pages/Analytics';
 import AboutModel from './pages/AboutModel';
 import Settings from './pages/Settings';
 import { useHistory } from './hooks/useHistory';
-import { api } from './services/api';
-import { AlertCircle } from 'lucide-react';
+import { api, getApiBaseUrl } from './services/api';
+import { AlertCircle, Globe, Settings as SettingsIcon, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -38,14 +38,22 @@ export default function App() {
 
   useEffect(() => {
     checkBackendHealth();
-    // Poll backend health periodically every 25 seconds
-    const interval = setInterval(checkBackendHealth, 25000);
+    // Poll backend health periodically every 20 seconds
+    const interval = setInterval(checkBackendHealth, 20000);
     return () => clearInterval(interval);
   }, [checkBackendHealth]);
 
   const handleSelectSample = (text, subject = '') => {
     setInitialSample({ text, subject });
   };
+
+  const currentApiUrl = getApiBaseUrl();
+  const isHostedOnline =
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
+  const isApiTargetingLocalhost =
+    currentApiUrl.includes('localhost') || currentApiUrl.includes('127.0.0.1');
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#070B14] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
@@ -71,23 +79,40 @@ export default function App() {
           isCheckingHealth={isCheckingHealth}
         />
 
-        {/* Offline Warning Banner (if backend disconnected) */}
+        {/* Offline Warning Banner with context-aware guidance */}
         {!backendOnline && (
-          <div className="bg-rose-500/15 border-b border-rose-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-rose-300">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-              <span>
-                Backend server is currently offline. Start the Python Flask backend with{' '}
-                <code className="bg-black/40 px-2 py-0.5 rounded font-mono text-white">python app.py</code> in the{' '}
-                <code className="bg-black/40 px-2 py-0.5 rounded font-mono text-white">backend/</code> folder.
-              </span>
+          <div className="bg-gradient-to-r from-rose-950/80 via-rose-900/60 to-[#120810] border-b border-rose-500/30 px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-200 shadow-md">
+            <div className="flex items-start sm:items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5 sm:mt-0" />
+              {isHostedOnline && isApiTargetingLocalhost ? (
+                <span>
+                  <strong>Deployed Website Detected:</strong> Your frontend is hosted online, but still points to <code className="bg-black/50 px-1.5 py-0.5 rounded font-mono text-cyan-300">{currentApiUrl}</code>. Enter your live Render backend URL in <strong>Settings</strong> so predictions can connect!
+                </span>
+              ) : (
+                <span>
+                  <strong>Backend Offline:</strong> Cannot reach API at <code className="bg-black/50 px-1.5 py-0.5 rounded font-mono text-cyan-300">{currentApiUrl}</code>. If running locally, start it with <code className="bg-black/50 px-1.5 py-0.5 rounded font-mono text-white">python app.py</code> in the <code className="bg-black/50 px-1.5 py-0.5 rounded font-mono text-white">backend/</code> folder. (If hosted on Render, free-tier services wake up after ~30s).
+                </span>
+              )}
             </div>
-            <button
-              onClick={checkBackendHealth}
-              className="text-xs font-bold underline hover:text-white transition-colors"
-            >
-              Retry Connection
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {isHostedOnline && isApiTargetingLocalhost && (
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <SettingsIcon className="w-3.5 h-3.5" />
+                  <span>Configure URL in Settings</span>
+                </button>
+              )}
+              <button
+                onClick={checkBackendHealth}
+                disabled={isCheckingHealth}
+                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isCheckingHealth ? 'animate-spin' : ''}`} />
+                <span>Retry</span>
+              </button>
+            </div>
           </div>
         )}
 
